@@ -6,14 +6,17 @@ using UnityEngine;
 public class GameClass : MonoBehaviour
 {
     public Point gameStart;
-    public List<Point> doorList;
+    public List<Point> []doorList;
     public List<Point> []fansList;
 
     public GameClass(int classNum) {
 
-        doorList = new List<Point>();
-        fansList = new List<Point>[2];
+        doorList = new List<Point>[3];//1 -> Door 2-> Coffee
+        fansList = new List<Point>[3];
         int i,j;
+        for (i = 0; i < doorList.Length; ++i) {
+            doorList[i] = new List<Point>();
+        }
         for (i=0;i< fansList.Length; ++i) {
             fansList[i] = new List<Point>();
         }
@@ -24,7 +27,6 @@ public class GameClass : MonoBehaviour
         string s = reader.ReadToEnd();
         Debug.Log(s);
         string []s2 = s.Split('\n');
-        Debug.Log("size="+s2.Length);
         for (i = 0; i < s2.Length; ++i) {
             string []s3 = s2[i].Split(',');
             for (j = 0; j < s3.Length; ++j) {
@@ -37,13 +39,18 @@ public class GameClass : MonoBehaviour
                         Debug.Log("Game start ="+j);
                         break;
                     case "D":
-                        doorList.Add(point);
+                        doorList[1].Add(point);
+                        break;
+                    case "C":
+                        doorList[2].Add(point);
                         break;
                     case "1"://帶去咖啡店的
                         fansList[1].Add(point);
                         break;
+                    case "2"://帶咖啡過去的
+                        fansList[2].Add(point);
+                        break;
                 }
-                Debug.Log("s3:"+ s3[j]);
             }
         }
         reader.Close();
@@ -54,9 +61,11 @@ public class GameClass : MonoBehaviour
         currentPoint.y = gameStart.y;
 
         int i,j;
-        for(i=0;i< doorList.Count;++i) {
-            Point p = doorList[i];
-            point[p.x][p.y].hasdoor = true;
+        for (i = 1; i < doorList.Length; ++i) {//1> Door , 2>Coffee
+            for (j = 0; j < doorList[i].Count; ++j) {
+                Point p = doorList[i][j];
+                point[p.x][p.y].buildingNum = i;
+            }
         }
 
         for (i = 1; i < fansList.Length; ++i) {//粉絲1,2,3,4,5 代表不同類型
