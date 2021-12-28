@@ -7,7 +7,7 @@ public class Main : MonoBehaviour {
     Point[][] point = new Point[maxSzie][];
     int currentTime = 0;
     Point currentPoint;
-    bool isPositive = true;
+    public bool isPositive = true;
     static int maxSzie = 5;
 
     public Canvas mCanvas;
@@ -20,7 +20,10 @@ public class Main : MonoBehaviour {
     public GameObject[] gbFans = new GameObject[20];
     public GameObject winWindow;
     public GameObject loseWindow;
+    public Toast toast;
+    public Text txDay, tvTime;
     public Tutorial tutorial;
+    public ToastAutoDestory toastAutoDestory;
 
     private GameClass currentClass;
 
@@ -32,13 +35,13 @@ public class Main : MonoBehaviour {
     GameState currentState = GameState.Plan;
 
     List<GameObject> allChest = new List<GameObject>();
-    int thisClass = 2;
-    int MaxClass = 20;
+    public static int thisClass = 2;
+    public static int MaxClass = 20;
     public static string keyClass = "classLevel";
     void Start() {
         int i, j;
         thisClass = PlayerPrefs.GetInt(keyClass, 1);
-        
+        //thisClass = 5;
         for (i = 0; i < maxSzie; ++i) {
             point[i] = new Point[maxSzie];
             for (j = 0; j < maxSzie; ++j) {
@@ -50,12 +53,16 @@ public class Main : MonoBehaviour {
 
         
         startNewGame(thisClass);
-        showTutorialIfNeed();
+        
         Debug.Log("Start");
     }
+    void updateTime(int t) {
+        tvTime.text = "0" + t + ":00";
+    }
 
-    void startNewGame(int classLevel) {
+    public void startNewGame(int classLevel) {
         int i, j;
+        thisClass = classLevel;
         currentClass = new GameClass(classLevel);
 
         hideWindow();
@@ -63,7 +70,8 @@ public class Main : MonoBehaviour {
         currentState = GameState.Plan;
         pathList = new List<Path>();
         currentTime = 0;
-
+        txDay.text = "<i>Day" + classLevel+"</i>";
+        updateTime(0);
         for (i = 0; i < maxSzie; ++i) {
             for (j = 0; j < maxSzie; ++j) {
                 point[i][j].clearAll();
@@ -76,13 +84,19 @@ public class Main : MonoBehaviour {
                 Destroy(mainChess[i].gameObject);
         }
 
-        currentPoint = new Point(0, 0);
-        currentClass.readFromClass(point, currentPoint);
-        createChess();
+        isPositive = true;
+
+        currentClass.readFromClass(point, out currentPoint);
+        //currentPoint = point[currentClass.gameStart.x][currentClass.gameStart.y];
+
 
         createPath(true);
-        currentPath.addPoint(currentPoint, 0, null);
-        isPositive = true;
+        
+        createChess();
+        FakeChess.transform.SetSiblingIndex(50);
+        createAStep();
+
+        showTutorialIfNeed();
     }
 
     public void TimeGo(int time) {
@@ -121,6 +135,8 @@ public class Main : MonoBehaviour {
         }
         else if (thisClass == 11) {
             tutorial.showTutorial(4);
+        } else {
+            tutorial.hideTutorial();
         }
     }
 
@@ -152,6 +168,7 @@ public class Main : MonoBehaviour {
                     return;
                 }
                 if(!mainChess[i].isPositive) {
+                    createDestoryToast(target);
                     continue;
                 }
 
@@ -165,6 +182,7 @@ public class Main : MonoBehaviour {
                 if(mainChess[i].bringThing == 1) {//帶咖啡
                     target.finishTheFans();
                     mainChess[i].finishThings();
+                    showLoves(target);
                 }
 
             } else if (target.buildingNum == 2 && currentTime <= 5) { // Coffee
@@ -183,23 +201,23 @@ public class Main : MonoBehaviour {
             }
         }
 
-        if(winTheGame()) {
-            showWin();
-        }
-
-        LoseWindow.LoseType lose = loseGame(currentTime);
-        if (lose == LoseWindow.LoseType.youInSamePlace) {
+        if (inSamePlace()) {
             showLose(LoseWindow.LoseType.youInSamePlace);
             return;
-        } else if(lose == LoseWindow.LoseType.questFailed) {
-            showLose(LoseWindow.LoseType.questFailed);
-            return;
         }
+
+        if (!hasMoreAction(currentTime)) {
+            if (winTheGame()) {
+                showWin();
+            } else {
+                showLose(LoseWindow.LoseType.questFailed);
+            }
+        }
+
     }
 
     private void showLose(LoseWindow.LoseType type) {
         currentState = GameState.lose;
-        winWindow.SetActive(true);
         loseWindow.GetComponent<LoseWindow>().showLose(type);
         currentState = GameState.lose;
     }
@@ -209,13 +227,23 @@ public class Main : MonoBehaviour {
         currentState = GameState.win;
         if (thisClass < MaxClass) {
             winWindow.GetComponent<WinWindow>().showWin(WinWindow.WinType.hasNext);
-            PlayerPrefs.SetInt(keyClass, thisClass+1);
+            PlayerPrefs.SetInt(keyClass, Mathf.Max(thisClass + 1, PlayerPrefs.GetInt(keyClass)));
         }
         else {
             winWindow.GetComponent<WinWindow>().showWin(WinWindow.WinType.lastClass);
         }
     }
-
+    private bool hasMoreAction(int time) {
+        int i, j;
+        for (i = 0; i < pathList.Count; ++i) {
+            for (j = 0; j < pathList[i].timeList.Count; ++j) {
+                if (pathList[i].timeList[j] >= time) { // 有更後面的時間, 回傳沒事
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     private void showWindow(bool isWin) {
 
@@ -224,7 +252,7 @@ public class Main : MonoBehaviour {
         }
     }
 
-    private LoseWindow.LoseType loseGame(int time) {
+    private bool inSamePlace() {
         int i, j;
         for (i = 0; i < mainChess.Length - 1; ++i) {
             if (mainChess[i] == null) continue;
@@ -232,20 +260,11 @@ public class Main : MonoBehaviour {
             for (j=i+1;j< mainChess.Length; ++j) {
                 if (mainChess[j] == null) continue;
                 if (mainChess[i].inSamePoint(mainChess[j].nextPoint)) {
-                    return LoseWindow.LoseType.youInSamePlace;
+                    return true;
                 }
             }
         }
-
-        for (i = 0; i < pathList.Count; ++i) {
-            for (j = 0; j < pathList[i].timeList.Count; ++j) {
-                if(pathList[i].timeList[j] >= time) { // 有更後面的時間, 回傳沒事
-                    return LoseWindow.LoseType.noneLose;
-                }
-            }
-        }
-
-        return LoseWindow.LoseType.questFailed;
+        return false;
     }
 
     private bool winTheGame() {
@@ -272,6 +291,7 @@ public class Main : MonoBehaviour {
             if (currentState != GameState.Start) {
                 yield return null;
             } else {
+                updateTime(i);
                 TimeGo(i);
                 yield return new WaitForSeconds(0.5f);
                 checkCurrentResult(i);
@@ -280,13 +300,18 @@ public class Main : MonoBehaviour {
         }
 
         if(currentState == GameState.Start) {
-            showLose(LoseWindow.LoseType.questFailed);
+            if (winTheGame()) {
+                showWin();
+            }
+            else {
+                showLose(LoseWindow.LoseType.questFailed);
+            }
         }
 
         yield return null;
     }
 
-    public void clickStart() {//bob
+    public void clickStart() {
         int i,j;
         if(currentState != GameState.Plan) {
             return;
@@ -352,23 +377,23 @@ public class Main : MonoBehaviour {
 
 
         if (tX < 0 || tX > maxSzie || tY < 0 || tY > maxSzie) {
+            toast.showToast("無法穿越地圖");
             return;
         }
         if(isPositive && currentTime == 9 ) {
+            toast.showToast("已經9點了\n無法再規劃行程");
             return;
         }
         if(!isPositive && currentTime == 0) {
+            toast.showToast("已經12點了\n無法再逆時行程");
             return;
         }
         currentPoint = point[tX][tY];
+        FakeChess.transform.position = new Vector3(currentPoint.getPosition().x, currentPoint.getPosition().y, 1);
 
         moveOneTime();
 
-        GameObject step = Instantiate(isPositive ? stepRed : stepBlue, mCanvas.transform);
-        currentPoint.addStep(step);
-        step.transform.Find("Text").GetComponent<Text>().text = "" + currentTime;
-
-        currentPath.addPoint(currentPoint, currentTime, step);
+        createAStep();
 
         if (currentPoint.hasdoor()) {
             createPath(isPositive);
@@ -378,6 +403,20 @@ public class Main : MonoBehaviour {
         Debug.Log("clickMove:" + currentPoint.x + "," + currentPoint.y + " time=" + currentTime);
     }
 
+    private void createAStep() {
+        GameObject step = Instantiate(isPositive ? stepRed : stepBlue, mCanvas.transform);
+        currentPoint.addStep(step);
+        step.transform.SetSiblingIndex(70);
+        step.transform.Find("Text").GetComponent<Text>().text = "" + currentTime;
+        currentPath.addPoint(currentPoint, currentTime, step);
+    }
+
+    private void createDestoryToast(Point point) {
+        GameObject obj = Instantiate(toastAutoDestory.gameObject, mCanvas.transform);
+        obj.transform.position = point.getPosition();
+        obj.transform.SetSiblingIndex(300);
+    }
+
     private void moveOneTime() {
         if (isPositive) {
             currentTime++;
@@ -385,6 +424,7 @@ public class Main : MonoBehaviour {
         else {
             currentTime--;
         }
+        updateTime(currentTime);
     }
 
     private void moveBackOneTime() {

@@ -6,7 +6,7 @@ public class Point
 {
     public int x;
     public int y;
-    public int r = 213;
+    
 
     public List<GameObject> stepList = new List<GameObject>();
     public bool isSatisfy = true;
@@ -24,11 +24,14 @@ public class Point
         this.y = y;
         fansNum = 0;
         buildingNum = 0;
+       
     }
 
     public Vector3 getPosition(float x2 = 0, float y2 = 0) {
-        return new Vector3((x-2)*r + 540 + x2,
-            (y-2)* r + 960 + y2,
+        int r = 213;
+        float rate = Mathf.Min(Screen.width / 1080f, Screen.height / 1920f);
+        return new Vector3((x-2)*r*rate + Screen.width/2 + x2,
+            (y-2)* r * rate+ Screen.height/2 + y2,
             0);
     }
 
@@ -52,10 +55,11 @@ public class Point
             return;
         }
         int i;
-
+        float rate = Mathf.Min(Screen.width / 1080f, Screen.height / 1920f);
+        float r = 42 * rate;
         for (i = 0; i < stepList.Count; ++i) {
-            float x2 = r / 5 * Mathf.Cos(6.28f * i / stepList.Count);
-            float y2 = r / 5 * Mathf.Sin(6.28f * i / stepList.Count);
+            float x2 = r * Mathf.Cos(6.28f * i / stepList.Count);
+            float y2 = r * Mathf.Sin(6.28f * i / stepList.Count);
             Debug.Log("x2=" + x2 + ",y2=" + y2);
             stepList[i].transform.position = getPosition(x2, y2);
         }

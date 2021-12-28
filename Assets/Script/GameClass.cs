@@ -20,13 +20,15 @@ public class GameClass : MonoBehaviour
         for (i=0;i< fansList.Length; ++i) {
             fansList[i] = new List<Point>();
         }
-
-        string path = "Assets/Resources/class/class"+classNum+".txt";
+        string path = "class/class" + classNum ;
+        Debug.Log("file=" + path);
+        //string path = "/Assets/Resources/class/class"+classNum+".txt";
         //Read the text from directly from the test.txt file
-        StreamReader reader = new StreamReader(path);
-        string s = reader.ReadToEnd();
-        Debug.Log(s);
-        string []s2 = s.Split('\n');
+        TextAsset textAsset = Resources.Load<TextAsset>(path);
+        //StreamReader reader = new StreamReader(path);
+        //string s = reader.ReadToEnd();
+        Debug.Log(textAsset);
+        string []s2 = textAsset.text.Split('\n');
         for (i = 0; i < s2.Length; ++i) {
             string []s3 = s2[i].Split(',');
             for (j = 0; j < s3.Length; ++j) {
@@ -53,14 +55,12 @@ public class GameClass : MonoBehaviour
                 }
             }
         }
-        reader.Close();
+        //reader.Close();
     }
 
-    public void readFromClass(Point[][] point, Point currentPoint) {
-        currentPoint.x = gameStart.x;
-        currentPoint.y = gameStart.y;
-
+    public void readFromClass(Point[][] point,out Point currentPoint) {
         int i,j;
+        currentPoint = point[gameStart.x][gameStart.y];
         for (i = 1; i < doorList.Length; ++i) {//1> Door , 2>Coffee
             for (j = 0; j < doorList[i].Count; ++j) {
                 Point p = doorList[i][j];
@@ -75,5 +75,6 @@ public class GameClass : MonoBehaviour
                 point[p.x][p.y].isSatisfy = false;
             }
         }
+        
     }
 }
